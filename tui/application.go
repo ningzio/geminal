@@ -73,8 +73,8 @@ func NewApplication(handler Handler) (*Application, error) {
 	app.history = history
 
 	app.addInputToGrid(input)
-	app.AddChatToGrid(chat)
-	app.AddHistoryToGrid(history)
+	app.addChatToGrid(chat)
+	app.addHistoryToGrid(history)
 
 	app.app.SetRoot(app.grid, true).EnableMouse(true)
 	return app, nil
@@ -89,17 +89,25 @@ type Application struct {
 	input   InputWight
 	chat    ChatWight
 	history HistoryWight
+
+	chatView tview.Primitive
+}
+
+func (app *Application) replaceChatView() {
+	app.grid.RemoveItem(app.chatView)
+	app.addChatToGrid(app.chat)
 }
 
 func (app *Application) addInputToGrid(input InputWight) {
 	app.grid.AddItem(input.Primitive(), 1, 1, 1, 1, 0, 0, true)
 }
 
-func (app *Application) AddChatToGrid(chat ChatWight) {
+func (app *Application) addChatToGrid(chat ChatWight) {
+	app.chatView = chat.Primitive()
 	app.grid.AddItem(chat.Primitive(), 0, 1, 1, 1, 0, 0, false)
 }
 
-func (app *Application) AddHistoryToGrid(history HistoryWight) {
+func (app *Application) addHistoryToGrid(history HistoryWight) {
 	app.grid.AddItem(history.Primitive(), 0, 0, 2, 1, 0, 0, false)
 }
 
@@ -110,7 +118,6 @@ func (app *Application) submitFunc() OnUserSubmit {
 		if len(chatID) == 0 {
 			conversation := app.h.NewConversation(context.Background())
 			app.chat.NewChatView(conversation.ChatID, conversation.Title, nil)
-			app.AddChatToGrid(app.chat)
 			app.history.NewHistory(conversation)
 		}
 		go app.h.Talk(context.Background(), chatID, app.chat.Writer(), input)
@@ -118,10 +125,6 @@ func (app *Application) submitFunc() OnUserSubmit {
 }
 
 func (app *Application) onHistoryChange(index int, title, chatID string, shortcut rune) {
-	app.grid.Clear()
-	app.addInputToGrid(app.input)
-	app.AddChatToGrid(app.chat)
-	app.AddHistoryToGrid(app.history)
 	ok := app.chat.SwitchView(chatID)
 	if !ok {
 		// title, content, err := app.h.GetConversationByChatID(context.Background(), chatID)
@@ -131,7 +134,7 @@ func (app *Application) onHistoryChange(index int, title, chatID string, shortcu
 		// }
 		app.chat.NewChatView(chatID, "Untitled", nil)
 	}
-	app.AddChatToGrid(app.chat)
+	app.replaceChatView()
 }
 
 func (app *Application) Run() error {

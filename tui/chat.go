@@ -12,6 +12,7 @@ func NewChatTUI(onChangeFunc func()) *ChatTUI {
 	return &ChatTUI{
 		onChangeFunc: onChangeFunc,
 		views:        make(map[string]*view),
+		page:         tview.NewPages(),
 	}
 }
 
@@ -28,6 +29,8 @@ type ChatTUI struct {
 	// chat chat history in side bar, chat ui should
 	// switch to correspond text view
 	views map[string]*view
+
+	page *tview.Pages
 }
 
 // SetTitle implements ChatWight.
@@ -40,14 +43,12 @@ func (c *ChatTUI) NewChatView(chatId string, title string, content []byte) {
 	_, _ = view.writer.Write(content)
 	c.views[chatId] = view
 	c.view = view
+	c.page.AddAndSwitchToPage(chatId, view.textView, true)
 }
 
 // Primitive implements Primitive.
 func (c *ChatTUI) Primitive() tview.Primitive {
-	if c.view == nil {
-		return c.emptyView().textView
-	}
-	return c.view.textView
+	return c.page
 }
 
 func (c *ChatTUI) Writer() io.Writer {
@@ -58,12 +59,9 @@ func (c *ChatTUI) SwitchView(chatId string) bool {
 	view, ok := c.views[chatId]
 	if ok {
 		c.view = view
+		c.page.SwitchToPage(chatId)
 	}
 	return ok
-}
-
-func (c *ChatTUI) emptyView() *view {
-	return newTextView("", c.onChangeFunc)
 }
 
 func newTextView(title string, onChangeFunc func()) *view {
