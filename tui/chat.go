@@ -38,22 +38,31 @@ func (c *ChatTUI) SetTitle(title string) {
 	c.view.textView.SetTitle(title)
 }
 
-func (c *ChatTUI) NewChatView(chatId string, title string, content []byte) {
-	view := newTextView(title, c.onChangeFunc)
-	_, _ = view.writer.Write(content)
-	c.views[chatId] = view
+func (c *ChatTUI) NewChatView(conversation *Conversation) {
+	view := newTextView(conversation.Title, c.onChangeFunc)
+	if conversation.Content != nil {
+		_, _ = view.writer.Write(conversation.Content)
+	}
+	c.views[conversation.ChatID] = view
 	c.view = view
-	c.page.AddAndSwitchToPage(chatId, view.textView, true)
+	c.page.AddAndSwitchToPage(conversation.ChatID, view.textView, true)
 }
 
 // Primitive implements Primitive.
 func (c *ChatTUI) Primitive() tview.Primitive {
 	return c.page
 }
-
 func (c *ChatTUI) Writer() io.Writer {
 	return c.view.writer
 }
+
+// func (c *ChatTUI) Writer(chatID string) io.Writer {
+// 	v, ok := c.views[chatID]
+// 	if !ok {
+// 		return nil
+// 	}
+// 	return v.writer
+// }
 
 func (c *ChatTUI) SwitchView(chatId string) bool {
 	view, ok := c.views[chatId]

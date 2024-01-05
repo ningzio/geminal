@@ -4,15 +4,23 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 
-	"github.com/ningzio/geminal/internal"
 	"github.com/rivo/tview"
 )
 
+type Conversation struct {
+	ChatID  string
+	Title   string
+	Content []byte
+}
+
 type Handler interface {
-	LoadHistory(ctx context.Context) ([]*internal.Conversation, error)
-	Talk(ctx context.Context, chatID string, writer io.Writer, prompt string)
-	NewConversation(ctx context.Context) *internal.Conversation
+	CreateConversation(ctx context.Context) (*Conversation, error)
+	ListConversation(ctx context.Context) ([]*Conversation, error)
+	GetConversation(ctx context.Context, chatID string) (*Conversation, error)
+
+	Talk(ctx context.Context, chatID string, writer io.Writer, prompt string) error
 }
 
 type Primitive interface {
@@ -24,7 +32,7 @@ type HistoryWight interface {
 	Primitive
 
 	// NewHistory 插入一个新的历史记录, 并且放在第一个位置
-	NewHistory(conv *internal.Conversation)
+	NewHistory(conv *Conversation)
 	// GetCurrentChatID 获取当前聊天窗口的 chat id
 	GetCurrentChatID() string
 }
@@ -38,12 +46,13 @@ type InputWight interface {
 type ChatWight interface {
 	Primitive
 	// Writer 返回当前的 chat view 的 writer, 用于写入聊天内容
+	// Writer(chatID string) io.Writer
 	Writer() io.Writer
 
 	// NewChatView 新建一个聊天窗口, 并切换到该窗口
-	NewChatView(chatId string, title string, content []byte)
+	NewChatView(conversation *Conversation)
 
-	// SwitchView 切换 chat view, 如果 chatId 不存在, 则新建一个, 并返回 false
+	// SwitchView 切换 chat view
 	SwitchView(chatId string) bool
 
 	SetTitle(title string)
@@ -54,9 +63,9 @@ func NewApplication(handler Handler) (*Application, error) {
 	tApp := tview.NewApplication()
 	tApp.SetRoot(grid, true).EnableMouse(true)
 	app := &Application{
-		h:    handler,
-		app:  tApp,
-		grid: grid,
+		backend: handler,
+		app:     tApp,
+		grid:    grid,
 	}
 
 	chat := NewChatTUI(func() { app.app.Draw() })
@@ -65,7 +74,7 @@ func NewApplication(handler Handler) (*Application, error) {
 	input := NewInputTUI(app.submitFunc())
 	app.input = input
 
-	conversations, err := app.h.LoadHistory(context.Background())
+	conversations, err := app.backend.ListConversation(context.Background())
 	if err != nil {
 		return nil, fmt.Errorf("init application: %w", err)
 	}
@@ -81,7 +90,7 @@ func NewApplication(handler Handler) (*Application, error) {
 }
 
 type Application struct {
-	h Handler
+	backend Handler
 
 	app  *tview.Application
 	grid *tview.Grid
@@ -89,13 +98,6 @@ type Application struct {
 	input   InputWight
 	chat    ChatWight
 	history HistoryWight
-
-	chatView tview.Primitive
-}
-
-func (app *Application) replaceChatView() {
-	app.grid.RemoveItem(app.chatView)
-	app.addChatToGrid(app.chat)
 }
 
 func (app *Application) addInputToGrid(input InputWight) {
@@ -103,7 +105,6 @@ func (app *Application) addInputToGrid(input InputWight) {
 }
 
 func (app *Application) addChatToGrid(chat ChatWight) {
-	app.chatView = chat.Primitive()
 	app.grid.AddItem(chat.Primitive(), 0, 1, 1, 1, 0, 0, false)
 }
 
@@ -116,25 +117,39 @@ func (app *Application) submitFunc() OnUserSubmit {
 		chatID := app.history.GetCurrentChatID()
 		// new conversation
 		if len(chatID) == 0 {
-			conversation := app.h.NewConversation(context.Background())
-			app.chat.NewChatView(conversation.ChatID, conversation.Title, nil)
+			conversation, err := app.backend.CreateConversation(context.Background())
+			if err != nil {
+				// TODO: error handling
+				log.Println(err)
+				return
+			}
+			chatID = conversation.ChatID
+			app.chat.NewChatView(conversation)
 			app.history.NewHistory(conversation)
 		}
-		go app.h.Talk(context.Background(), chatID, app.chat.Writer(), input)
+		go func() {
+			// if err := app.backend.Talk(context.Background(), chatID, app.chat.Writer(chatID), input); err != nil {
+			if err := app.backend.Talk(context.Background(), chatID, app.chat.Writer(), input); err != nil {
+				// TODO: error handling
+				log.Println(err)
+				return
+			}
+		}()
 	}
 }
 
 func (app *Application) onHistoryChange(index int, title, chatID string, shortcut rune) {
 	ok := app.chat.SwitchView(chatID)
 	if !ok {
-		// title, content, err := app.h.GetConversationByChatID(context.Background(), chatID)
-		// if err != nil {
-		// 	// TODO: error handling
-		// 	return
-		// }
-		app.chat.NewChatView(chatID, "Untitled", nil)
+		// restore conversation from repository
+		conversation, err := app.backend.GetConversation(context.Background(), chatID)
+		if err != nil {
+			// TODO: error handling
+			log.Println(err)
+			return
+		}
+		app.chat.NewChatView(conversation)
 	}
-	app.replaceChatView()
 }
 
 func (app *Application) Run() error {

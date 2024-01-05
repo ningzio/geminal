@@ -43,10 +43,22 @@ func (*GeminiAI) NewSession(ctx context.Context, chatID string, history ...*inte
 }
 
 // Talk implements internal.LLM.
-func (ai *GeminiAI) Talk(ctx context.Context, chatID string, messages ...*internal.Message) (result *internal.Message) {
+func (ai *GeminiAI) Talk(ctx context.Context, chatID string, history []*internal.Message, messages ...*internal.Message) (*internal.Message, error) {
 	session, ok := ai.sessions[chatID]
 	if !ok {
 		session = ai.model.StartChat()
+		for _, msg := range history {
+			var role string
+			if msg.Role == ai.Name() {
+				role = "model"
+			} else {
+				role = "user"
+			}
+			session.History = append(session.History, &genai.Content{
+				Parts: []genai.Part{genai.Text(string(msg.Content))},
+				Role:  role,
+			})
+		}
 		ai.sessions[chatID] = session
 	}
 
@@ -55,15 +67,14 @@ func (ai *GeminiAI) Talk(ctx context.Context, chatID string, messages ...*intern
 		prompts = append(prompts, genai.Text(string(msg.Content)))
 	}
 
-	result = &internal.Message{
+	result := &internal.Message{
 		ChatID: chatID,
 		Role:   ai.Name(),
 	}
 
 	resp, err := session.SendMessage(ctx, prompts...)
 	if err != nil {
-		result.ErrMsg = fmt.Sprintf("gemini ai: %v", err)
-		return
+		return nil, err
 	}
 
 	if resp.PromptFeedback != nil && resp.PromptFeedback.BlockReason != 0 {
@@ -75,7 +86,7 @@ func (ai *GeminiAI) Talk(ctx context.Context, chatID string, messages ...*intern
 		case genai.BlockReasonOther:
 			result.ErrMsg += fmt.Sprintf("block: %v", resp.PromptFeedback.BlockReason)
 		}
-		return
+		return result, nil
 	}
 
 	for _, i := range resp.Candidates[0].Content.Parts {
@@ -86,5 +97,5 @@ func (ai *GeminiAI) Talk(ctx context.Context, chatID string, messages ...*intern
 		default:
 		}
 	}
-	return
+	return result, nil
 }

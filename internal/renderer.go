@@ -38,7 +38,7 @@ type ChromaRenderer struct {
 
 // RenderMessage implements Renderer.
 func (cr *ChromaRenderer) RenderMessage(writer io.Writer, message *Message) {
-	str := fmt.Sprintf("# %s:\n\n%s\n\n", message.Role, message.Content)
+	str := fmt.Sprintf("# 🚀 %s:\n\n%s\n\n", message.Role, message.Content)
 
 	iterator, err := cr.lexer.Tokenise(nil, str)
 	if err != nil {

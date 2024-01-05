@@ -24,6 +24,7 @@ func (i *InputTUI) Primitive() tview.Primitive {
 func NewInputTUI(submitFunc OnUserSubmit) *InputTUI {
 	textArea := tview.NewTextArea()
 	textArea.SetPlaceholder("Type something here...")
+	textArea.SetWordWrap(true)
 
 	position := tview.NewTextView().
 		SetDynamicColors(true).
@@ -43,8 +44,9 @@ func NewInputTUI(submitFunc OnUserSubmit) *InputTUI {
 
 	textArea.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyEnter {
-			submitFunc(textArea.GetText())
+			input := textArea.GetText()
 			textArea.SetText("", true)
+			submitFunc(input)
 			return nil
 		}
 		return event

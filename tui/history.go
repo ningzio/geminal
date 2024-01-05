@@ -1,7 +1,6 @@
 package tui
 
 import (
-	"github.com/ningzio/geminal/internal"
 	"github.com/rivo/tview"
 )
 
@@ -11,7 +10,7 @@ type OnHistoryListChangeFunc func(index int, title, chatID string, shortcut rune
 var _ HistoryWight = (*HistoryTUI)(nil)
 
 // NewHistoryTUI 创建一个历史聊天记录组件
-func NewHistoryTUI(handler OnHistoryListChangeFunc, messages ...*internal.Conversation) *HistoryTUI {
+func NewHistoryTUI(handler OnHistoryListChangeFunc, messages ...*Conversation) *HistoryTUI {
 	list := tview.NewList()
 	list.SetTitle("History")
 	list.SetBorder(true)
@@ -37,7 +36,7 @@ func (h *HistoryTUI) Primitive() tview.Primitive {
 	return h.list
 }
 
-func (h *HistoryTUI) NewHistory(conv *internal.Conversation) {
+func (h *HistoryTUI) NewHistory(conv *Conversation) {
 	h.list.InsertItem(0, conv.Title, conv.ChatID, 0, nil)
 	h.list.SetCurrentItem(0)
 }
