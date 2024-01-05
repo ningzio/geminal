@@ -13,7 +13,6 @@ var _ HistoryWight = (*HistoryTUI)(nil)
 func NewHistoryTUI(handler OnHistoryListChangeFunc, messages ...*Conversation) *HistoryTUI {
 	list := tview.NewList()
 	list.SetTitle("History")
-	list.SetBorder(true)
 	list.ShowSecondaryText(false)
 
 	list.SetChangedFunc(handler)

@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 
+	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
 
@@ -84,6 +85,23 @@ func NewApplication(handler Handler) (*Application, error) {
 	app.addInputToGrid(input)
 	app.addChatToGrid(chat)
 	app.addHistoryToGrid(history)
+
+	app.app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		switch event.Key() {
+		case tcell.KeyF1:
+			// help
+		case tcell.KeyF2:
+			app.app.SetFocus(app.history.Primitive())
+			return nil
+		case tcell.KeyF3:
+			app.app.SetFocus(app.input.Primitive())
+			return nil
+		case tcell.KeyF4:
+			app.app.SetFocus(app.chat.Primitive())
+			return nil
+		}
+		return event
+	})
 
 	app.app.SetRoot(app.grid, true).EnableMouse(true)
 	return app, nil

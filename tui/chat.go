@@ -56,14 +56,6 @@ func (c *ChatTUI) Writer() io.Writer {
 	return c.view.writer
 }
 
-// func (c *ChatTUI) Writer(chatID string) io.Writer {
-// 	v, ok := c.views[chatID]
-// 	if !ok {
-// 		return nil
-// 	}
-// 	return v.writer
-// }
-
 func (c *ChatTUI) SwitchView(chatId string) bool {
 	view, ok := c.views[chatId]
 	if ok {
@@ -81,6 +73,7 @@ func newTextView(title string, onChangeFunc func()) *view {
 	textView.SetWordWrap(true)
 	textView.SetChangedFunc(func() {
 		onChangeFunc()
+		textView.ScrollToEnd()
 	})
 	writer := tview.ANSIWriter(textView)
 
