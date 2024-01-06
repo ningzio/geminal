@@ -71,6 +71,17 @@ func NewApplication(handler Backend) (*Application, error) {
 		case tcell.KeyF4:
 			app.app.SetFocus(app.chat.Primitive())
 			return nil
+		case tcell.KeyF5:
+			conv, err := app.backend.CreateConversation(context.Background())
+			if err != nil {
+				app.warning.SetText(err.Error())
+				app.warning.SetButtons("ok")
+				app.warning.SetColor(tcell.ColorRed)
+				app.page.AddPage("warning", app.warning.Primitive(), true, true)
+				return nil
+			}
+			app.history.NewHistory(conv)
+			app.chat.NewChatView(conv)
 		}
 		return event
 	})

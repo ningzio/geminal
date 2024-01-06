@@ -12,13 +12,13 @@ type OnUserSubmit = func(input string)
 
 // InputTUI 负责控制用户的输入
 type InputTUI struct {
-	textArea  *tview.TextArea
-	primitive tview.Primitive
+	textArea *tview.TextArea
+	grid     *tview.Grid
 }
 
 // Primitive implements Primitive.
 func (i *InputTUI) Primitive() tview.Primitive {
-	return i.primitive
+	return i.grid
 }
 
 func NewInputTUI(submitFunc OnUserSubmit) *InputTUI {
@@ -59,7 +59,7 @@ func NewInputTUI(submitFunc OnUserSubmit) *InputTUI {
 	grid.SetBorder(true)
 
 	return &InputTUI{
-		textArea:  textArea,
-		primitive: grid,
+		textArea: textArea,
+		grid:     grid,
 	}
 }
