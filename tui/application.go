@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -16,7 +15,7 @@ type Conversation struct {
 	Content []byte
 }
 
-type Handler interface {
+type Backend interface {
 	CreateConversation(ctx context.Context) (*Conversation, error)
 	ListConversation(ctx context.Context) ([]*Conversation, error)
 	GetConversation(ctx context.Context, chatID string) (*Conversation, error)
@@ -24,42 +23,7 @@ type Handler interface {
 	Talk(ctx context.Context, chatID string, writer io.Writer, prompt string) error
 }
 
-type Primitive interface {
-	Primitive() tview.Primitive
-}
-
-// HistoryWight 历史记录组件
-type HistoryWight interface {
-	Primitive
-
-	// NewHistory 插入一个新的历史记录, 并且放在第一个位置
-	NewHistory(conv *Conversation)
-	// GetCurrentChatID 获取当前聊天窗口的 chat id
-	GetCurrentChatID() string
-}
-
-// InputWight 用户输入组件
-type InputWight interface {
-	Primitive
-}
-
-// ChatWight 聊天窗口组件
-type ChatWight interface {
-	Primitive
-	// Writer 返回当前的 chat view 的 writer, 用于写入聊天内容
-	// Writer(chatID string) io.Writer
-	Writer() io.Writer
-
-	// NewChatView 新建一个聊天窗口, 并切换到该窗口
-	NewChatView(conversation *Conversation)
-
-	// SwitchView 切换 chat view
-	SwitchView(chatId string) bool
-
-	SetTitle(title string)
-}
-
-func NewApplication(handler Handler) (*Application, error) {
+func NewApplication(handler Backend) (*Application, error) {
 	grid := tview.NewGrid().SetRows(-8, -2).SetColumns(-2, -8)
 	tApp := tview.NewApplication()
 	tApp.SetRoot(grid, true).EnableMouse(true)
@@ -86,6 +50,14 @@ func NewApplication(handler Handler) (*Application, error) {
 	app.addChatToGrid(chat)
 	app.addHistoryToGrid(history)
 
+	page := tview.NewPages()
+	page.AddAndSwitchToPage("main", grid, true)
+
+	warning := NewWarningTUI(func() { app.page.RemovePage("warning") })
+	app.warning = warning
+
+	app.page = page
+
 	app.app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Key() {
 		case tcell.KeyF1:
@@ -103,30 +75,43 @@ func NewApplication(handler Handler) (*Application, error) {
 		return event
 	})
 
-	app.app.SetRoot(app.grid, true).EnableMouse(true)
+	app.app.SetRoot(app.page, true)
 	return app, nil
 }
 
 type Application struct {
-	backend Handler
+	backend Backend
 
 	app  *tview.Application
 	grid *tview.Grid
+	page *tview.Pages
 
-	input   InputWight
-	chat    ChatWight
-	history HistoryWight
+	input   InputWidget
+	chat    ChatWidget
+	history HistoryWidget
+	warning WarningWidget
 }
 
-func (app *Application) addInputToGrid(input InputWight) {
+/*
+********************
+*   *              *
+*   *              *
+* 1 *      2       *
+*   *              *
+*   ****************
+*   *      3       *
+********************
+ */
+
+func (app *Application) addInputToGrid(input InputWidget) {
 	app.grid.AddItem(input.Primitive(), 1, 1, 1, 1, 0, 0, true)
 }
 
-func (app *Application) addChatToGrid(chat ChatWight) {
+func (app *Application) addChatToGrid(chat ChatWidget) {
 	app.grid.AddItem(chat.Primitive(), 0, 1, 1, 1, 0, 0, false)
 }
 
-func (app *Application) addHistoryToGrid(history HistoryWight) {
+func (app *Application) addHistoryToGrid(history HistoryWidget) {
 	app.grid.AddItem(history.Primitive(), 0, 0, 2, 1, 0, 0, false)
 }
 
@@ -137,8 +122,10 @@ func (app *Application) submitFunc() OnUserSubmit {
 		if len(chatID) == 0 {
 			conversation, err := app.backend.CreateConversation(context.Background())
 			if err != nil {
-				// TODO: error handling
-				log.Println(err)
+				app.warning.SetText(err.Error())
+				app.warning.SetButtons("ok")
+				app.warning.SetColor(tcell.ColorRed)
+				app.page.AddPage("warning", app.warning.Primitive(), true, true)
 				return
 			}
 			chatID = conversation.ChatID
@@ -148,8 +135,10 @@ func (app *Application) submitFunc() OnUserSubmit {
 		go func() {
 			// if err := app.backend.Talk(context.Background(), chatID, app.chat.Writer(chatID), input); err != nil {
 			if err := app.backend.Talk(context.Background(), chatID, app.chat.Writer(), input); err != nil {
-				// TODO: error handling
-				log.Println(err)
+				app.warning.SetText(err.Error())
+				app.warning.SetButtons("ok")
+				app.warning.SetColor(tcell.ColorRed)
+				app.page.AddPage("warning", app.warning.Primitive(), true, true)
 				return
 			}
 		}()
@@ -162,8 +151,10 @@ func (app *Application) onHistoryChange(index int, title, chatID string, shortcu
 		// restore conversation from repository
 		conversation, err := app.backend.GetConversation(context.Background(), chatID)
 		if err != nil {
-			// TODO: error handling
-			log.Println(err)
+			app.warning.SetText(err.Error())
+			app.warning.SetButtons("ok")
+			app.warning.SetColor(tcell.ColorRed)
+			app.page.AddPage("warning", app.warning.Primitive(), true, true)
 			return
 		}
 		app.chat.NewChatView(conversation)

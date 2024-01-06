@@ -6,7 +6,7 @@ import (
 	"github.com/rivo/tview"
 )
 
-var _ ChatWight = (*ChatTUI)(nil)
+var _ ChatWidget = (*ChatTUI)(nil)
 
 func NewChatTUI(onChangeFunc func()) *ChatTUI {
 	return &ChatTUI{

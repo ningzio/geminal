@@ -18,18 +18,19 @@ func main() {
 	defer f.Close()
 	log.SetOutput(f)
 
-	apiKey := os.Getenv("API_KEY")
-	ai, err := llm.NewGeminiAI(apiKey)
-	if err != nil {
-		log.Fatal(err)
-	}
+	// apiKey := os.Getenv("API_KEY")
+	// ai, err := llm.NewGeminiAI(apiKey)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
 
 	r, err := repo.NewRepository()
 	if err != nil {
 		log.Fatalf("init repo: %s", err)
 	}
 	h := internal.NewHandler(
-		ai,
+		// ai,
+		&llm.Mock{},
 		r,
 		internal.NewChromaRenderer(),
 		// internal.NewMarkdownRenderer(),
@@ -40,7 +41,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	log.Fatal(app.Run())
+	if err := app.Run(); err != nil {
+		log.Fatal(err)
+	}
 }
 
 // func foo() {

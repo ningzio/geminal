@@ -55,7 +55,7 @@ type Message struct {
 	ErrMsg      string
 }
 
-var _ tui.Handler = (*Handler)(nil)
+var _ tui.Backend = (*Handler)(nil)
 
 func NewHandler(llm LLM, repo Repository, render Renderer) *Handler {
 	return &Handler{

@@ -1,4 +1,8 @@
 # geminal
 
-
-TODO: render content with [chroma](https://github.com/alecthomas/chroma)
+- [x] 错误提示窗口
+- [ ] 新建聊天
+- [ ] 删除聊天记录
+- [ ] 自动为聊天增加标题
+- [ ] 本地存储目录
+- [ ] style

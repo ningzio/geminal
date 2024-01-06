@@ -7,13 +7,14 @@ import (
 // OnHistoryListChangeFunc 当用户浏览历史记录列表时的处理方法
 type OnHistoryListChangeFunc func(index int, title, chatID string, shortcut rune)
 
-var _ HistoryWight = (*HistoryTUI)(nil)
+var _ HistoryWidget = (*HistoryTUI)(nil)
 
 // NewHistoryTUI 创建一个历史聊天记录组件
 func NewHistoryTUI(handler OnHistoryListChangeFunc, messages ...*Conversation) *HistoryTUI {
 	list := tview.NewList()
 	list.SetTitle("History")
 	list.ShowSecondaryText(false)
+	list.SetBorder(true)
 
 	list.SetChangedFunc(handler)
 
