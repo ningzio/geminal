@@ -42,9 +42,9 @@ func (cr *ChromaRenderer) RenderMessage(writer io.Writer, message *Message) {
 
 	iterator, err := cr.lexer.Tokenise(nil, str)
 	if err != nil {
-		writer.Write([]byte(fmt.Sprintf("render: %v", err)))
+		_, _ = writer.Write([]byte(fmt.Sprintf("render: %v", err)))
 	}
 	if err := cr.formatter.Format(writer, cr.style, iterator); err != nil {
-		writer.Write([]byte(fmt.Sprintf("render: %v", err)))
+		_, _ = writer.Write([]byte(fmt.Sprintf("render: %v", err)))
 	}
 }

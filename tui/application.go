@@ -26,7 +26,7 @@ type Backend interface {
 }
 
 func NewApplication(handler Backend) (*Application, error) {
-	grid := tview.NewGrid().SetRows(-8, -2).SetColumns(-2, -8)
+	grid := tview.NewGrid().SetRows(-8, -2, 1).SetColumns(-2, -8)
 	tApp := tview.NewApplication()
 	tApp.SetRoot(grid, true).EnableMouse(true)
 	app := &Application{
@@ -51,6 +51,7 @@ func NewApplication(handler Backend) (*Application, error) {
 	app.addInputToGrid(input)
 	app.addChatToGrid(chat)
 	app.addHistoryToGrid(history)
+	app.addShortcut()
 
 	page := tview.NewPages()
 	page.AddAndSwitchToPage("main", grid, true)
@@ -63,17 +64,15 @@ func NewApplication(handler Backend) (*Application, error) {
 	app.app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Key() {
 		case tcell.KeyF1:
-			// help
-		case tcell.KeyF2:
 			app.app.SetFocus(app.history.Primitive())
 			return nil
-		case tcell.KeyF3:
+		case tcell.KeyF2:
 			app.app.SetFocus(app.input.Primitive())
 			return nil
-		case tcell.KeyF4:
+		case tcell.KeyF3:
 			app.app.SetFocus(app.chat.Primitive())
 			return nil
-		case tcell.KeyF5:
+		case tcell.KeyF4:
 			conv, err := app.backend.CreateConversation(context.Background())
 			if err != nil {
 				app.warning.SetText(err.Error())
@@ -114,6 +113,8 @@ type Application struct {
 *   ****************
 *   *      3       *
 ********************
+*       4          *
+********************
  */
 
 func (app *Application) addInputToGrid(input InputWidget) {
@@ -126,6 +127,15 @@ func (app *Application) addChatToGrid(chat ChatWidget) {
 
 func (app *Application) addHistoryToGrid(history HistoryWidget) {
 	app.grid.AddItem(history.Primitive(), 0, 0, 2, 1, 0, 0, false)
+}
+
+func (app *Application) addShortcut() {
+	view := tview.NewTextView()
+	view.SetText("F1: history, F2: input, F3: chat, F4: new conversation")
+	view.SetDynamicColors(true)
+	view.SetTextColor(tcell.ColorDarkGrey)
+
+	app.grid.AddItem(view, 2, 0, 1, 2, 0, 0, false)
 }
 
 func (app *Application) submitFunc() OnUserSubmit {

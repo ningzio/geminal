@@ -31,6 +31,7 @@ func NewHistoryTUI(handler HistoryHandler, messages ...*Conversation) *HistoryTU
 	input := newInputField()
 	warning := errorModal()
 
+	list.SetTitle("Conversation")
 	list.ShowSecondaryText(false)
 	list.SetBorder(true)
 
