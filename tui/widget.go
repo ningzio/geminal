@@ -37,7 +37,9 @@ type ChatWidget interface {
 	NewChatView(conversation *Conversation)
 
 	// SwitchView 切换 chat view
-	SwitchView(chatId string) bool
+	SwitchView(chatID string) bool
+
+	DeleteView(chatID string)
 
 	SetTitle(title string)
 }

@@ -14,7 +14,7 @@ type HistoryHandler interface {
 const (
 	conversations = "conversations"
 	options       = "options"
-	delete        = "delete"
+	deletePage    = "delete"
 	renameInput   = "rename"
 	warningModal  = "warning"
 )
@@ -37,7 +37,7 @@ func NewHistoryTUI(handler HistoryHandler, messages ...*Conversation) *HistoryTU
 
 	page.AddPage(conversations, list, true, true)
 	page.AddPage(options, option, true, false)
-	page.AddPage(delete, deleteConfirm, true, false)
+	page.AddPage(deletePage, deleteConfirm, true, false)
 	page.AddPage(renameInput, input, true, false)
 	page.AddPage(warningModal, warning, true, false)
 
@@ -137,7 +137,7 @@ func (h *HistoryTUI) ShowDeletePage() {
 		}
 		h.deleteHistory()
 	})
-	h.page.SwitchToPage(delete)
+	h.page.SwitchToPage(deletePage)
 }
 
 func (h *HistoryTUI) deleteHistory() {

@@ -185,7 +185,11 @@ func (app *Application) OnConversationChanged(chatID string) {
 }
 
 func (app *Application) DeleteConversation(chatID string) error {
-	return app.backend.DeleteConversation(context.Background(), chatID)
+	if err := app.backend.DeleteConversation(context.Background(), chatID); err != nil {
+		return err
+	}
+	app.chat.DeleteView(chatID)
+	return nil
 }
 func (app *Application) RenameConversation(chatID, newTitle string) error {
 	return app.backend.UpdateConversation(context.Background(), chatID, newTitle)

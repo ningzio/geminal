@@ -2,7 +2,6 @@ package llm
 
 import (
 	"context"
-	"errors"
 	"os"
 
 	"github.com/ningzio/geminal/internal"
@@ -26,7 +25,7 @@ func (*Mock) NewSession(ctx context.Context, chatID string, history ...*internal
 //
 //nolint:govet
 func (c *Mock) Talk(ctx context.Context, chatID string, history []*internal.Message, messages ...*internal.Message) (*internal.Message, error) {
-	return nil, errors.New("mock error")
+	// return nil, errors.New("mock error")
 	f, err := os.ReadFile("/Users/ningzi/workspace/personal/geminal/internal/llm/mark.log")
 	if err != nil {
 		return &internal.Message{}, nil

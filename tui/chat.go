@@ -33,6 +33,12 @@ type ChatTUI struct {
 	page *tview.Pages
 }
 
+// DeleteView implements ChatWidget.
+func (c *ChatTUI) DeleteView(chatID string) {
+	delete(c.views, chatID)
+	c.page.RemovePage(chatID)
+}
+
 // SetTitle implements ChatWight.
 func (c *ChatTUI) SetTitle(title string) {
 	c.view.textView.SetTitle(title)
