@@ -1,5 +1,8 @@
 # geminal
 
+![Alt text](assets/screenshot.png)
+
+
 - [x] 错误提示窗口
 - [x] 新建聊天
 - [x] 删除聊天记录 / 重命名聊天标题
