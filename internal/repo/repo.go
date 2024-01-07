@@ -25,6 +25,17 @@ type Repository struct {
 	db *badger.DB
 }
 
+// DeleteConversation implements internal.Repository.
+func (repo *Repository) DeleteConversation(ctx context.Context, chatID string) error {
+	err := repo.db.Update(func(txn *badger.Txn) error {
+		return txn.Delete(chatStoreKey(chatID))
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 var chatStoreKeyPrefix = []byte("conversation:")
 
 func chatStoreKey(chatID string) []byte {

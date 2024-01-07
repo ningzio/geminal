@@ -21,6 +21,8 @@ type Repository interface {
 	GetConversationByChatID(ctx context.Context, chatID string) (*Conversation, error)
 	// SaveConversation 负责保存历史聊天记录
 	SaveConversation(ctx context.Context, conversation *Conversation) error
+	// DeleteConversation 负责删除历史聊天记录
+	DeleteConversation(ctx context.Context, chatID string) error
 }
 
 type LLM interface {
@@ -69,6 +71,21 @@ type Handler struct {
 	render Renderer
 	repo   Repository
 	llm    LLM
+}
+
+// DeleteConversation implements tui.Backend.
+func (h *Handler) DeleteConversation(ctx context.Context, chatID string) error {
+	return h.repo.DeleteConversation(ctx, chatID)
+}
+
+// UpdateConversation implements tui.Backend.
+func (h *Handler) UpdateConversation(ctx context.Context, chatID string, title string) error {
+	conv, err := h.repo.GetConversationByChatID(ctx, chatID)
+	if err != nil {
+		return err
+	}
+	conv.Title = title
+	return h.repo.SaveConversation(ctx, conv)
 }
 
 // CreateConversation implements tui.Handler.

@@ -16,9 +16,11 @@ type Conversation struct {
 }
 
 type Backend interface {
-	CreateConversation(ctx context.Context) (*Conversation, error)
-	ListConversation(ctx context.Context) ([]*Conversation, error)
 	GetConversation(ctx context.Context, chatID string) (*Conversation, error)
+	CreateConversation(ctx context.Context) (*Conversation, error)
+	DeleteConversation(ctx context.Context, chatID string) error
+	UpdateConversation(ctx context.Context, chatID, title string) error
+	ListConversation(ctx context.Context) ([]*Conversation, error)
 
 	Talk(ctx context.Context, chatID string, writer io.Writer, prompt string) error
 }
@@ -43,7 +45,7 @@ func NewApplication(handler Backend) (*Application, error) {
 	if err != nil {
 		return nil, fmt.Errorf("init application: %w", err)
 	}
-	history := NewHistoryTUI(app.onHistoryChange, conversations...)
+	history := NewHistoryTUI(app, conversations...)
 	app.history = history
 
 	app.addInputToGrid(input)
@@ -156,7 +158,7 @@ func (app *Application) submitFunc() OnUserSubmit {
 	}
 }
 
-func (app *Application) onHistoryChange(index int, title, chatID string, shortcut rune) {
+func (app *Application) OnConversationChanged(chatID string) {
 	ok := app.chat.SwitchView(chatID)
 	if !ok {
 		// restore conversation from repository
@@ -170,6 +172,13 @@ func (app *Application) onHistoryChange(index int, title, chatID string, shortcu
 		}
 		app.chat.NewChatView(conversation)
 	}
+}
+
+func (app *Application) DeleteConversation(chatID string) error {
+	return app.backend.DeleteConversation(context.Background(), chatID)
+}
+func (app *Application) RenameConversation(chatID, newTitle string) error {
+	return app.backend.UpdateConversation(context.Background(), chatID, newTitle)
 }
 
 func (app *Application) Run() error {
