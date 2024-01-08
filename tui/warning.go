@@ -5,12 +5,12 @@ import (
 	"github.com/rivo/tview"
 )
 
-type WarningTUI struct {
+type Warning struct {
 	modal *tview.Modal
 	flex  *tview.Flex
 }
 
-func NewWarningTUI(doneFunc func()) *WarningTUI {
+func NewWarningTUI(doneFunc func()) *Warning {
 	modal := tview.NewModal()
 	modal.AddButtons([]string{"OK"})
 	modal.SetDoneFunc(func(buttonIndex int, buttonLabel string) {
@@ -25,22 +25,22 @@ func NewWarningTUI(doneFunc func()) *WarningTUI {
 			AddItem(nil, 0, 1, false), 0, 1, true).
 		AddItem(nil, 0, 1, false)
 
-	return &WarningTUI{modal: modal, flex: flex}
+	return &Warning{modal: modal, flex: flex}
 }
 
-func (w *WarningTUI) SetText(message string) {
+func (w *Warning) SetText(message string) {
 	w.modal.SetText(message)
 }
 
-func (w *WarningTUI) SetButtons(buttons ...string) {
+func (w *Warning) SetButtons(buttons ...string) {
 	w.modal.ClearButtons()
 	w.modal.AddButtons(buttons)
 }
 
-func (w *WarningTUI) SetColor(color tcell.Color) {
+func (w *Warning) SetColor(color tcell.Color) {
 	w.modal.SetTextColor(color)
 }
 
-func (w *WarningTUI) Primitive() tview.Primitive {
+func (w *Warning) Primitive() tview.Primitive {
 	return w.flex
 }

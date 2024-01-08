@@ -12,159 +12,148 @@ type HistoryHandler interface {
 }
 
 const (
-	conversations = "conversations"
-	options       = "options"
-	deletePage    = "delete"
-	renameInput   = "rename"
-	warningModal  = "warning"
+	pageConversations = "conversations"
+	pageOptions       = "options"
+	pageDeletePage    = "delete"
+	pageRenameInput   = "rename"
+	pageWarningModal  = "warning"
 )
 
-var _ HistoryWidget = (*HistoryTUI)(nil)
-
 // NewHistoryTUI 创建一个历史聊天记录组件
-func NewHistoryTUI(handler HistoryHandler, messages ...*Conversation) *HistoryTUI {
+func NewHistoryTUI(handler HistoryHandler) *History {
 	page := tview.NewPages()
-
-	list := tview.NewList()
-	deleteConfirm := newDeleteModal()
+	conversation := newConversationList()
+	deleteConversation := newDeleteModal()
 	option := newOption()
 	input := newInputField()
 	warning := errorModal()
 
-	list.SetTitle("Conversation")
-	list.ShowSecondaryText(false)
-	list.SetBorder(true)
-
-	page.AddPage(conversations, list, true, true)
-	page.AddPage(options, option, true, false)
-	page.AddPage(deletePage, deleteConfirm, true, false)
-	page.AddPage(renameInput, input, true, false)
-	page.AddPage(warningModal, warning, true, false)
-
-	history := &HistoryTUI{
-		handler:       handler,
-		list:          list,
-		deleteConfirm: deleteConfirm,
-		options:       option,
-		renameInput:   input,
-		page:          page,
+	history := &History{
+		handler:            handler,
+		conversations:      conversation,
+		deleteConversation: deleteConversation,
+		options:            option,
+		renameTitle:        input,
+		warning:            warning,
+		page:               page,
 	}
 
-	warning.SetDoneFunc(func(buttonIndex int, buttonLabel string) {
-		page.SwitchToPage(conversations)
-	})
-
-	list.SetChangedFunc(func(index int, mainText, secondaryText string, shortcut rune) {
-		handler.OnConversationChanged(secondaryText)
-	})
-	list.SetSelectedFunc(func(i int, s1, s2 string, r rune) {
-		history.ShowOptionPage(i, s2)
-	})
-	for _, msg := range messages {
-		list.AddItem(msg.Title, msg.ChatID, 0, nil)
-	}
-
-	option.SetDoneFunc(func() { page.SwitchToPage(conversations) })
-	option.SetSelectedFunc(func(i int, s1, s2 string, r rune) {
-		switch s1 {
-		case optionDelete:
-			history.ShowDeletePage()
-		case optionRename:
-			history.ShowRenameTitlePage()
-		case optionNothing:
-			page.SwitchToPage(conversations)
-		}
-	})
+	history.addPages()
+	history.setCallbackFunc()
 
 	return history
 }
 
-type optionContext struct {
-	index  int
-	chatID string
-}
-
-type HistoryTUI struct {
+type History struct {
 	handler HistoryHandler
 
 	// components
-	list          *tview.List
-	options       *tview.List
-	deleteConfirm *tview.Modal
-	renameInput   *tview.InputField
-	warning       *tview.Modal
+	conversations      *tview.List
+	options            *tview.List
+	deleteConversation *tview.Modal
+	renameTitle        *tview.InputField
+	warning            *tview.Modal
 
 	// to organize components
 	page *tview.Pages
+}
 
-	optionContext *optionContext
+// addPages adds pages to the history.
+//
+// It adds several pages to the history's page container. Each page is added with its corresponding content and settings.
+func (h *History) addPages() {
+	h.page.AddPage(pageConversations, h.conversations, true, true)
+	h.page.AddPage(pageOptions, h.options, true, false)
+	h.page.AddPage(pageDeletePage, h.deleteConversation, true, false)
+	h.page.AddPage(pageRenameInput, h.renameTitle, true, false)
+	h.page.AddPage(pageWarningModal, h.warning, true, false)
+}
+
+// setCallbackFunc 为 History 中的对话设置回调函数。
+func (h *History) setCallbackFunc() {
+	h.conversations.SetChangedFunc(func(index int, mainText, secondaryText string, shortcut rune) {
+		h.handler.OnConversationChanged(secondaryText)
+	})
+	h.conversations.SetSelectedFunc(func(i int, s1, s2 string, r rune) {
+		h.ShowOptionPage(i, s2)
+	})
 }
 
 // Primitive implements Primitive.
-func (h *HistoryTUI) Primitive() tview.Primitive {
+func (h *History) Primitive() tview.Primitive {
 	return h.page
 }
 
-func (h *HistoryTUI) NewHistory(conv *Conversation) {
-	h.list.InsertItem(0, conv.Title, conv.ChatID, 0, nil)
-	h.list.SetCurrentItem(0)
+// NewHistory adds a new conversation to the history.
+//
+// Parameters:
+// - conv: A pointer to the Conversation object to be added.
+func (h *History) NewHistory(conv *Conversation) {
+	h.conversations.InsertItem(0, conv.Title, conv.ChatID, 0, nil)
+	h.conversations.SetCurrentItem(0)
 }
 
-func (h *HistoryTUI) GetCurrentChatID() string {
-	if h.list.GetItemCount() == 0 {
+// GetCurrentChatID returns the current chat ID.
+func (h *History) GetCurrentChatID() string {
+	if h.conversations.GetItemCount() == 0 {
 		return ""
 	}
-	_, chatID := h.list.GetItemText(h.list.GetCurrentItem())
+	_, chatID := h.conversations.GetItemText(h.conversations.GetCurrentItem())
 	return chatID
 }
 
-func (h *HistoryTUI) ShowOptionPage(index int, chatID string) {
-	h.optionContext = &optionContext{
-		index:  index,
-		chatID: chatID,
-	}
-	h.page.SwitchToPage(options)
+// ShowOptionPage displays the option page at the specified index for the given chat ID.
+//
+// Parameters:
+// - index: The index of the option page to be displayed.
+// - chatID: The ID of the chat for which the option page is being displayed.
+func (h *History) ShowOptionPage(index int, chatID string) {
+	h.options.SetSelectedFunc(func(i int, s1, s2 string, r rune) {
+		switch s1 {
+		case optionDelete:
+			h.ShowDeletePage(index, chatID)
+		case optionRename:
+			h.ShowRenameTitlePage(index, chatID)
+		case optionNothing:
+			h.page.SwitchToPage(pageConversations)
+		}
+	})
+	h.page.SwitchToPage(pageOptions)
 }
 
-func (h *HistoryTUI) ShowDeletePage() {
-	h.deleteConfirm.SetDoneFunc(func(buttonIndex int, buttonLabel string) {
-		defer func() {
-			h.page.SwitchToPage(conversations)
-			h.optionContext = nil
-		}()
+func (h *History) ShowDeletePage(index int, chatID string) {
+	h.deleteConversation.SetDoneFunc(func(buttonIndex int, buttonLabel string) {
+		defer h.page.SwitchToPage(pageConversations)
 		if buttonLabel != deleteConfirmButton {
 			return
 		}
-		h.deleteHistory()
+		h.deleteHistory(index, chatID)
 	})
-	h.page.SwitchToPage(deletePage)
+	h.page.SwitchToPage(pageDeletePage)
 }
 
-func (h *HistoryTUI) deleteHistory() {
-	if err := h.handler.DeleteConversation(h.optionContext.chatID); err != nil {
+func (h *History) deleteHistory(index int, chatID string) {
+	if err := h.handler.DeleteConversation(chatID); err != nil {
 		h.warning.SetText(err.Error())
-		h.page.SwitchToPage(warningModal)
+		h.page.SwitchToPage(pageWarningModal)
 	}
-	h.list.RemoveItem(h.optionContext.index)
+	h.conversations.RemoveItem(index)
 }
 
-func (h *HistoryTUI) ShowRenameTitlePage() {
-	h.renameInput.SetDoneFunc(func(key tcell.Key) {
-		defer func() {
-			h.renameInput.SetText("")
-			h.optionContext = nil
-		}()
+func (h *History) ShowRenameTitlePage(index int, chatID string) {
+	h.renameTitle.SetDoneFunc(func(key tcell.Key) {
+		defer h.renameTitle.SetText("")
 		if key == tcell.KeyEnter {
-			if err := h.handler.RenameConversation(h.optionContext.chatID, h.renameInput.GetText()); err != nil {
+			if err := h.handler.RenameConversation(chatID, h.renameTitle.GetText()); err != nil {
 				h.warning.SetText(err.Error())
-				h.page.SwitchToPage(warningModal)
+				h.page.SwitchToPage(pageWarningModal)
 			} else {
-				h.list.SetItemText(h.optionContext.index, h.renameInput.GetText(), h.optionContext.chatID)
+				h.conversations.SetItemText(index, h.renameTitle.GetText(), chatID)
 			}
 		}
-		h.page.SwitchToPage(conversations)
+		h.page.SwitchToPage(pageConversations)
 	})
-	h.page.SwitchToPage(renameInput)
+	h.page.SwitchToPage(pageRenameInput)
 }
 
 func newInputField() *tview.InputField {
@@ -206,4 +195,13 @@ func errorModal() *tview.Modal {
 	modal := tview.NewModal()
 	modal.AddButtons([]string{"OK"})
 	return modal
+}
+
+func newConversationList() *tview.List {
+	list := tview.NewList()
+	list.SetTitle("Conversations")
+	list.SetBorder(true)
+	list.ShowSecondaryText(false)
+
+	return list
 }

@@ -1,11 +1,28 @@
 package tui
 
 import (
+	"context"
 	"io"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
+
+type Conversation struct {
+	ChatID  string
+	Title   string
+	Content []byte
+}
+
+type Backend interface {
+	GetConversation(ctx context.Context, chatID string) (*Conversation, error)
+	CreateConversation(ctx context.Context) (*Conversation, error)
+	DeleteConversation(ctx context.Context, chatID string) error
+	UpdateConversation(ctx context.Context, chatID, title string) error
+	ListConversation(ctx context.Context) ([]*Conversation, error)
+
+	Talk(ctx context.Context, chatID string, writer io.Writer, prompt string) error
+}
 
 type Primitive interface {
 	Primitive() tview.Primitive
