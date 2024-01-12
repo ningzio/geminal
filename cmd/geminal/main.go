@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"os"
+	"path/filepath"
 
 	"github.com/ningzio/geminal/internal"
 	"github.com/ningzio/geminal/internal/llm"
@@ -11,7 +12,18 @@ import (
 )
 
 func main() {
-	f, err := os.OpenFile("geminal.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	geminalDir := filepath.Join(homeDir, ".geminal")
+	err = os.MkdirAll(geminalDir, os.ModePerm)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	f, err := os.OpenFile(filepath.Join(geminalDir, "geminal.log"), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
 		log.Fatal(err)
 	}
