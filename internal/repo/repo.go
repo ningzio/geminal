@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 
 	badger "github.com/dgraph-io/badger/v4"
 	"github.com/ningzio/geminal/internal"
@@ -12,13 +14,26 @@ import (
 var _ internal.Repository = (*Repository)(nil)
 
 func NewRepository() (*Repository, error) {
-	db, err := badger.Open(badger.DefaultOptions(".geminal.db"))
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return nil, err
+	}
+
+	geminalDir := filepath.Join(homeDir, ".geminal")
+	err = os.MkdirAll(geminalDir, os.ModePerm)
+	if err != nil {
+		return nil, err
+	}
+
+	dbPath := filepath.Join(geminalDir, "geminal.db")
+	db, err := badger.Open(badger.DefaultOptions(dbPath))
 	if err != nil {
 		return nil, err
 	}
 	return &Repository{
 		db: db,
 	}, nil
+
 }
 
 type Repository struct {
